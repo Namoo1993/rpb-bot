@@ -132,12 +132,12 @@ export default async function handler(req, res) {
 
     // Supabase???ÖÎ°ú??(?àÏä§?†Î¶¨ Î≥¥Í?)
     const { error: uploadErr } = await supabase.storage
-      .from('results').upload(filename, outBuffer, {
+      .from('Results').upload(filename, outBuffer, {
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
     if (uploadErr) throw new Error('Í≤∞Í≥º ?Ä???§Ìå®: ' + uploadErr.message);
 
-    const { data: urlData } = supabase.storage.from('results').getPublicUrl(filename);
+    const { data: urlData } = supabase.storage.from('Results').getPublicUrl(filename);
 
     // DB???àÏä§?†Î¶¨ Í∏∞Î°ù
     await supabase.from('rpb_history').insert({
