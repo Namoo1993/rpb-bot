@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 
-// ── 집계 로직 정의 ─────────────────────────────────────────
+// ?�?� 집계 로직 ?�의 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 const ROW_FILTERS = [
   { pol: 'VNHPH',             pod: 'KR',                      polList: ['VNHPH'],                                                          podList: null },
   { pol: 'CNSHK',             pod: 'KR',                      polList: ['CNSHK'],                                                          podList: null },
@@ -24,7 +24,7 @@ const ROW_FILTERS = [
   { pol: 'RU',                pod: 'KR',                      polList: ['RUVVO','RUVFP'],                                                  podList: null },
 ];
 
-// 엑셀 행 번호: [PP행, CLT행] (1-indexed)
+// ?��? ??번호: [PP?? CLT?? (1-indexed)
 const ROW_EXCEL = {
   'VNHPH|KR':                        [5,6],
   'CNSHK|KR':                        [9,10],
@@ -51,7 +51,7 @@ function parseRawData(buffer) {
   const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-  const headers = rows[3]; // 4번째 행 = 헤더
+  const headers = rows[3]; // 4번째 ??= ?�더
   const data = [];
   for (let i = 4; i < rows.length; i++) {
     const row = rows[i];
@@ -80,34 +80,34 @@ function getTeuRpb(data, polList, podList, pc) {
   return { teu: Math.round(teu), rpb: teu > 0 ? inc / teu : 0 };
 }
 
-// ── Vercel Handler ─────────────────────────────────────────
+// ?�?� Vercel Handler ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { fileData, label } = req.body;
-    if (!fileData) return res.status(400).json({ error: 'fileData가 없습니다.' });
+    if (!fileData) return res.status(400).json({ error: 'fileData가 ?�습?�다.' });
 
-    // RAW DATA 파싱
+    // RAW DATA ?�싱
     const rawBuffer = Buffer.from(fileData, 'base64');
     const data = parseRawData(rawBuffer);
 
-    // 템플릿 로드 — templates 버킷에서 가장 최근 파일 자동 선택
+    // ?�플�?로드 ??templates 버킷?�서 가??최근 ?�일 ?�동 ?�택
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
     const { data: fileList, error: listErr } = await supabase.storage
-      .from('templates').list('', { sortBy: { column: 'created_at', order: 'desc' } });
+      .from('Templates').list('', { sortBy: { column: 'created_at', order: 'desc' } });
     if (listErr || !fileList || fileList.length === 0)
-      throw new Error('templates 버킷에 파일이 없습니다.');
+      throw new Error('templates 버킷???�일???�습?�다.');
     const latestFile = fileList[0].name;
     const { data: tplBlob, error: tplErr } = await supabase.storage
-      .from('templates').download(latestFile);
-    if (tplErr) throw new Error(`템플릿 로드 실패 (${latestFile}): ` + tplErr.message);
+      .from('Templates').download(latestFile);
+    if (tplErr) throw new Error(`?�플�?로드 ?�패 (${latestFile}): ` + tplErr.message);
 
     const templateBuffer = Buffer.from(await tplBlob.arrayBuffer());
     const wb = XLSX.read(templateBuffer, { type: 'buffer' });
     const ws = wb.Sheets['RPB'];
 
-    // INBOUND TOTAL PP/CLT 행 AK/AL 함수 (없을 경우 삽입)
+    // INBOUND TOTAL PP/CLT ??AK/AL ?�수 (?�을 경우 ?�입)
     const encCell = (r, c) => XLSX.utils.encode_cell({ r: r - 1, c: c - 1 });
     const sumPP  = [5,9,13,17,21,25,29,33,37,41,45,49,53,57,61,65,69,73,77,81].map(r=>`AK${r}`).join('+');
     const sumCLT = [6,10,14,18,22,26,30,34,38,42,46,50,54,58,62,66,70,74,78,82].map(r=>`AK${r}`).join('+');
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
     if (!ws[encCell(85,38)]) ws[encCell(85,38)] = { t:'f', f: 'IFERROR(AW85/AK85,"0")' };
     if (!ws[encCell(86,38)]) ws[encCell(86,38)] = { t:'f', f: 'IFERROR(AW86/AK86,"0")' };
 
-    // 데이터 입력 (AK=col37, AL=col38)
+    // ?�이???�력 (AK=col37, AL=col38)
     for (const { pol, pod, polList, podList } of ROW_FILTERS) {
       const [ppRow, cltRow] = ROW_EXCEL[`${pol}|${pod}`];
       for (const [rowNum, pc] of [[ppRow,'PP'],[cltRow,'CLT']]) {
@@ -126,20 +126,20 @@ export default async function handler(req, res) {
       }
     }
 
-    // 결과 파일 생성
+    // 결과 ?�일 ?�성
     const outBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     const filename = `RPB_${label || 'result'}_${new Date().toISOString().slice(0,10)}_${Date.now()}.xlsx`;
 
-    // Supabase에 업로드 (히스토리 보관)
+    // Supabase???�로??(?�스?�리 보�?)
     const { error: uploadErr } = await supabase.storage
       .from('results').upload(filename, outBuffer, {
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-    if (uploadErr) throw new Error('결과 저장 실패: ' + uploadErr.message);
+    if (uploadErr) throw new Error('결과 ?�???�패: ' + uploadErr.message);
 
     const { data: urlData } = supabase.storage.from('results').getPublicUrl(filename);
 
-    // DB에 히스토리 기록
+    // DB???�스?�리 기록
     await supabase.from('rpb_history').insert({
       filename,
       label: label || '',
