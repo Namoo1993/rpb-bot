@@ -152,6 +152,9 @@ export default async function handler(req, res) {
 
     // 결과 파일 생성
     zip.file('xl/worksheets/sheet1.xml', sheetXml);
+    const wbXml = await zip.file('xl/workbook.xml').async('string');
+    const wbXmlFixed = wbXml.replace(/<calcPr([^/]*?)(\/?>)/, '<calcPr$1 fullCalcOnLoad="1"$2');
+    zip.file('xl/workbook.xml', wbXmlFixed);
     const outBuffer = Buffer.from(await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }));
 
     // Supabase 저장
