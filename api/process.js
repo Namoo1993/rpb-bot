@@ -1,30 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
-import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 
-// ── 집계 로직 정의 ─────────────────────────────────────────
+// ── 집계 로직 ──────────────────────────────────────────────
 const ROW_FILTERS = [
-  { pol: 'VNHPH',             pod: 'KR',                      polList: ['VNHPH'],                                                          podList: null },
-  { pol: 'CNSHK',             pod: 'KR',                      polList: ['CNSHK'],                                                          podList: null },
-  { pol: 'CNXMN',             pod: 'KR',                      polList: ['CNXMN'],                                                          podList: null },
-  { pol: 'VNSGN',             pod: 'KR',                      polList: ['VNSGN'],                                                          podList: null },
-  { pol: 'TH',                pod: 'KR',                      polList: ['TH'],                                                             podList: null },
-  { pol: 'JP',                pod: 'KR',                      polList: ['JPYOK','JPTYO','JPNGO','JPSMZ','JPOSA','JPUKB','JPHKT','JPMOJ'],  podList: null },
-  { pol: 'CNSHA',             pod: 'KRINC/KRKUV',             polList: ['CNSHA'],                                                          podList: ['KRINC','KRKUV'] },
-  { pol: 'CNNGB',             pod: 'KRINC/KRKUV',             polList: ['CNNGB'],                                                          podList: ['KRINC','KRKUV'] },
-  { pol: 'CNSHA',             pod: 'KRPUS/KRKAN/KRUSN',       polList: ['CNSHA'],                                                          podList: ['KRPUS','KRKAN','KRUSN'] },
-  { pol: 'CNNGB',             pod: 'KRPUS/KRKAN/KRUSN',       polList: ['CNNGB'],                                                          podList: ['KRPUS','KRKAN','KRUSN'] },
-  { pol: 'CNTAO/CNLYG',       pod: 'KR',                      polList: ['CNTAO','CNLYG'],                                                  podList: null },
-  { pol: 'CNTXG',             pod: 'KRINC/KRPUS/KRKAN/KRUSN', polList: ['CNTXG'],                                                         podList: ['KRINC','KRPUS','KRKAN','KRUSN'] },
-  { pol: 'CNTXG',             pod: 'KRPTK',                   polList: ['CNTXG'],                                                          podList: ['KRPTK'] },
-  { pol: 'CNDLC',             pod: 'KR',                      polList: ['CNDLC'],                                                          podList: null },
-  { pol: 'CNYNT',             pod: 'KR',                      polList: ['CNYNT'],                                                          podList: null },
-  { pol: 'CNNKG',             pod: 'KR',                      polList: ['CNNKG'],                                                          podList: null },
-  { pol: 'CNZJG',             pod: 'KRPUS/KRKAN/KRUSN',       polList: ['CNZJG'],                                                          podList: ['KRPUS','KRKAN','KRUSN'] },
-  { pol: 'CNNTG/CNTAG/CNZJG', pod: 'KRINC/KRPTK',            polList: ['CNNTG','CNTAG','CNZJG'],                                          podList: ['KRINC','KRPTK'] },
-  { pol: 'RU',                pod: 'KR',                      polList: ['RUVVO','RUVFP'],                                                  podList: null },
+  { pol: 'VNHPH',             pod: 'KR',                       polList: ['VNHPH'],                                                         podList: null },
+  { pol: 'CNSHK',             pod: 'KR',                       polList: ['CNSHK'],                                                         podList: null },
+  { pol: 'CNXMN',             pod: 'KR',                       polList: ['CNXMN'],                                                         podList: null },
+  { pol: 'VNSGN',             pod: 'KR',                       polList: ['VNSGN'],                                                         podList: null },
+  { pol: 'TH',                pod: 'KR',                       polList: ['TH'],                                                            podList: null },
+  { pol: 'JP',                pod: 'KR',                       polList: ['JPYOK','JPTYO','JPNGO','JPSMZ','JPOSA','JPUKB','JPHKT','JPMOJ'], podList: null },
+  { pol: 'CNSHA',             pod: 'KRINC/KRKUV',              polList: ['CNSHA'],                                                         podList: ['KRINC','KRKUV'] },
+  { pol: 'CNNGB',             pod: 'KRINC/KRKUV',              polList: ['CNNGB'],                                                         podList: ['KRINC','KRKUV'] },
+  { pol: 'CNSHA',             pod: 'KRPUS/KRKAN/KRUSN',        polList: ['CNSHA'],                                                         podList: ['KRPUS','KRKAN','KRUSN'] },
+  { pol: 'CNNGB',             pod: 'KRPUS/KRKAN/KRUSN',        polList: ['CNNGB'],                                                         podList: ['KRPUS','KRKAN','KRUSN'] },
+  { pol: 'CNTAO/CNLYG',       pod: 'KR',                       polList: ['CNTAO','CNLYG'],                                                 podList: null },
+  { pol: 'CNTXG',             pod: 'KRINC/KRPUS/KRKAN/KRUSN',  polList: ['CNTXG'],                                                        podList: ['KRINC','KRPUS','KRKAN','KRUSN'] },
+  { pol: 'CNTXG',             pod: 'KRPTK',                    polList: ['CNTXG'],                                                         podList: ['KRPTK'] },
+  { pol: 'CNDLC',             pod: 'KR',                       polList: ['CNDLC'],                                                         podList: null },
+  { pol: 'CNYNT',             pod: 'KR',                       polList: ['CNYNT'],                                                         podList: null },
+  { pol: 'CNNKG',             pod: 'KR',                       polList: ['CNNKG'],                                                         podList: null },
+  { pol: 'CNZJG',             pod: 'KRPUS/KRKAN/KRUSN',        polList: ['CNZJG'],                                                         podList: ['KRPUS','KRKAN','KRUSN'] },
+  { pol: 'CNNTG/CNTAG/CNZJG', pod: 'KRINC/KRPTK',             polList: ['CNNTG','CNTAG','CNZJG'],                                         podList: ['KRINC','KRPTK'] },
+  { pol: 'RU',                pod: 'KR',                       polList: ['RUVVO','RUVFP'],                                                  podList: null },
 ];
 
-// 엑셀 행 번호: [PP행, CLT행] (1-indexed)
 const ROW_EXCEL = {
   'VNHPH|KR':                        [5,6],
   'CNSHK|KR':                        [9,10],
@@ -47,24 +46,60 @@ const ROW_EXCEL = {
   'RU|KR':                           [77,78],
 };
 
+// ── XML 직접 수정 (서식 완벽 보존) ─────────────────────────
+function setCellValue(xml, cellAddr, value) {
+  const val = value !== null && value !== undefined ? String(value) : '0';
+
+  // 수식 셀은 건드리지 않음
+  const formulaRe = new RegExp(`<c r="${cellAddr}"[^>]*>[^<]*<f`);
+  if (formulaRe.test(xml)) return xml;
+
+  // 빈 셀: <c r="AK5" s="25"/>
+  const emptyRe = new RegExp(`(<c r="${cellAddr}"(?:\\s+[^/]*)?)(\\/\\s*>)`);
+  const emptyMatch = xml.match(emptyRe);
+  if (emptyMatch) {
+    const newCell = `${emptyMatch[1]}><v>${val}</v></c>`;
+    return xml.slice(0, emptyMatch.index) + newCell + xml.slice(emptyMatch.index + emptyMatch[0].length);
+  }
+
+  // 값 있는 셀: <c r="AK5" s="25"><v>123</v></c>
+  const valueRe = new RegExp(`(<c r="${cellAddr}"[^>]*>)(<v>[^<]*<\\/v>)(<\\/c>)`);
+  const valueMatch = xml.match(valueRe);
+  if (valueMatch) {
+    const newCell = `${valueMatch[1]}<v>${val}</v></c>`;
+    return xml.slice(0, valueMatch.index) + newCell + xml.slice(valueMatch.index + valueMatch[0].length);
+  }
+
+  return xml;
+}
+
+// ── RAW DATA 파싱 ───────────────────────────────────────────
 function parseRawData(buffer) {
-  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const XLSX = require('xlsx');
+  const wb = XLSX.read(buffer, { type: 'buffer' });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
   const headers = rows[3]; // 4번째 행 = 헤더
+
+  const findIdx = (name, def) => {
+    const i = headers.findIndex(h => String(h||'').trim() === name);
+    return i >= 0 ? i : def;
+  };
+  const iPol = findIdx('POL', 13), iPod = findIdx('POD', 14);
+  const iTeu = findIdx('TEU', 20), iPc  = findIdx('P/C', 21);
+  const iSttl = findIdx('S.TTL1', 29);
+
   const data = [];
   for (let i = 4; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.length === 0) continue;
-    const obj = {};
-    headers.forEach((h, idx) => { if (h) obj[h] = row[idx]; });
-    const teu   = parseFloat(obj['TEU']);
-    const sttl1 = parseFloat(obj['S.TTL1']);
-    const pol   = String(obj['POL'] || '').trim();
-    const pod   = String(obj['POD'] || '').trim();
-    const pc    = String(obj['P/C'] || '').trim().toUpperCase();
-    if (!isNaN(teu) && teu > 0 && pol && pol !== 'undefined' && pol !== 'POL') {
-      data.push({ pol, pod, teu, sttl1: isNaN(sttl1) ? 0 : sttl1, pc: pc === 'P' ? 'PP' : 'CLT' });
+    if (!row) continue;
+    const pol  = String(row[iPol]  || '').trim();
+    const pod  = String(row[iPod]  || '').trim();
+    const teu  = parseFloat(row[iTeu]  || 0);
+    const pc   = String(row[iPc]   || '').trim().toUpperCase();
+    const sttl = parseFloat(row[iSttl] || 0);
+    if (pol && pol !== 'nan' && pol !== 'POL' && teu > 0) {
+      data.push({ pol, pod, teu, sttl, pc: pc === 'P' ? 'PP' : 'CLT' });
     }
   }
   return data;
@@ -76,84 +111,67 @@ function getTeuRpb(data, polList, podList, pc) {
   if (pc === 'PP')  sub = sub.filter(r => r.pc === 'PP');
   if (pc === 'CLT') sub = sub.filter(r => r.pc === 'CLT');
   const teu = sub.reduce((s, r) => s + r.teu, 0);
-  const inc = sub.reduce((s, r) => s + r.sttl1, 0);
+  const inc = sub.reduce((s, r) => s + r.sttl, 0);
   return { teu: Math.round(teu), rpb: teu > 0 ? inc / teu : 0 };
 }
 
-// ── Vercel Handler ─────────────────────────────────────────
+// ── Vercel Handler ──────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { fileData, label } = req.body;
-    if (!fileData) return res.status(400).json({ error: 'fileData가 없습니다.' });
+    if (!fileData) return res.status(400).json({ error: 'fileData 없음' });
 
     // RAW DATA 파싱
     const rawBuffer = Buffer.from(fileData, 'base64');
     const data = parseRawData(rawBuffer);
+    const totalTeu = data.reduce((s, r) => s + r.teu, 0);
 
-    // 템플릿 로드 — templates 버킷에서 가장 최근 파일 자동 선택
+    // 템플릿 로드 (Supabase)
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-    const { data: fileList, error: listErr } = await supabase.storage
-      .from('templates').list('', { sortBy: { column: 'created_at', order: 'desc' } });
-    if (listErr || !fileList || fileList.length === 0)
-      throw new Error('templates 버킷에 파일이 없습니다.');
-    const latestFile = fileList[0].name;
-    const { data: tplBlob, error: tplErr } = await supabase.storage
-      .from('templates').download(latestFile);
-    if (tplErr) throw new Error(`템플릿 로드 실패 (${latestFile}): ` + tplErr.message);
+    const fileList = await supabase.storage.from('Templates').list('', { sortBy: { column: 'created_at', order: 'desc' } });
+    if (!fileList.data || fileList.data.length === 0) throw new Error('Templates 버킷에 파일이 없습니다.');
+    const latest = fileList.data[0].name;
+    const { data: tplBlob } = await supabase.storage.from('Templates').download(latest);
+    const tplBuffer = Buffer.from(await tplBlob.arrayBuffer());
 
-    const templateBuffer = Buffer.from(await tplBlob.arrayBuffer());
-    const wb = XLSX.read(templateBuffer, { type: 'buffer' });
-    const ws = wb.Sheets['RPB'];
+    // ZIP으로 열어서 sheet XML 직접 수정 (서식 100% 보존)
+    const zip = await JSZip.loadAsync(tplBuffer);
+    let sheetXml = await zip.file('xl/worksheets/sheet1.xml').async('string');
 
-    // INBOUND TOTAL PP/CLT 행 AK/AL 함수 (없을 경우 삽입)
-    const encCell = (r, c) => XLSX.utils.encode_cell({ r: r - 1, c: c - 1 });
-    const sumPP  = [5,9,13,17,21,25,29,33,37,41,45,49,53,57,61,65,69,73,77,81].map(r=>`AK${r}`).join('+');
-    const sumCLT = [6,10,14,18,22,26,30,34,38,42,46,50,54,58,62,66,70,74,78,82].map(r=>`AK${r}`).join('+');
-    if (!ws[encCell(85,37)]) ws[encCell(85,37)] = { t:'f', f: sumPP };
-    if (!ws[encCell(86,37)]) ws[encCell(86,37)] = { t:'f', f: sumCLT };
-    if (!ws[encCell(85,38)]) ws[encCell(85,38)] = { t:'f', f: 'IFERROR(AW85/AK85,"0")' };
-    if (!ws[encCell(86,38)]) ws[encCell(86,38)] = { t:'f', f: 'IFERROR(AW86/AK86,"0")' };
-
-    // 데이터 입력 (AK=col37, AL=col38)
-    for (const { pol, pod, polList, podList } of ROW_FILTERS) {
-      const [ppRow, cltRow] = ROW_EXCEL[`${pol}|${pod}`];
-      for (const [rowNum, pc] of [[ppRow,'PP'],[cltRow,'CLT']]) {
-        const { teu, rpb } = getTeuRpb(data, polList, podList, pc);
-        ws[encCell(rowNum, 37)] = { t: 'n', v: teu };
-        ws[encCell(rowNum, 38)] = { t: 'n', v: parseFloat(rpb.toFixed(10)) };
+    // 데이터 입력
+    for (const f of ROW_FILTERS) {
+      const [ppRow, cltRow] = ROW_EXCEL[`${f.pol}|${f.pod}`];
+      for (const [rowNum, pc] of [[ppRow, 'PP'], [cltRow, 'CLT']]) {
+        const { teu, rpb } = getTeuRpb(data, f.polList, f.podList, pc);
+        sheetXml = setCellValue(sheetXml, `AK${rowNum}`, teu);
+        sheetXml = setCellValue(sheetXml, `AL${rowNum}`, parseFloat(rpb.toFixed(10)));
       }
     }
 
     // 결과 파일 생성
-    const outBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    const filename = `RPB_${label || 'result'}_${new Date().toISOString().slice(0,10)}_${Date.now()}.xlsx`;
+    zip.file('xl/worksheets/sheet1.xml', sheetXml);
+    const outBuffer = Buffer.from(await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }));
 
-    // Supabase에 업로드 (히스토리 보관)
-    const { error: uploadErr } = await supabase.storage
-      .from('results').upload(filename, outBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-    if (uploadErr) throw new Error('결과 저장 실패: ' + uploadErr.message);
+    // Supabase 저장
+    const today = new Date().toISOString().slice(0, 10);
+    const ts = Date.now();
+    const filename = `RPB_${label || 'result'}_${today}_${ts}.xlsx`;
+    await supabase.storage.from('Results').upload(filename, outBuffer, {
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const { data: urlData } = supabase.storage.from('Results').getPublicUrl(filename);
 
-    const { data: urlData } = supabase.storage.from('results').getPublicUrl(filename);
-
-    // DB에 히스토리 기록
     await supabase.from('rpb_history').insert({
-      filename,
-      label: label || '',
-      url: urlData.publicUrl,
-      created_at: new Date().toISOString(),
-      total_teu: data.reduce((s,r) => s+r.teu, 0),
+      filename, label: label || '', url: urlData.publicUrl,
+      total_teu: Math.round(totalTeu), created_at: new Date().toISOString(),
     });
 
     res.status(200).json({
-      success: true,
-      filename,
-      url: urlData.publicUrl,
+      success: true, filename, url: urlData.publicUrl,
       fileBase64: outBuffer.toString('base64'),
-      totalTeu: data.reduce((s,r) => s+r.teu, 0),
+      totalTeu: Math.round(totalTeu),
     });
   } catch (err) {
     console.error(err);
