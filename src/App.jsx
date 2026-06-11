@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || ''
 function formatDate(iso) {
   if (!iso) return '-'
   const d = new Date(iso)
-  return d.toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
 function downloadBase64(base64, filename) {
