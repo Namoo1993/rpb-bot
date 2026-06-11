@@ -171,9 +171,7 @@ export default function App() {
               <button className="btn-dl primary" onClick={() => downloadBase64(result.fileBase64, result.filename)}>
                 ↓ 다시 다운로드
               </button>
-              <a className="btn-dl secondary" href={result.url} target="_blank" rel="noreferrer">
-                🔗 링크 복사용
-              </a>
+             
             </div>
           </section>
         )}
