@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     // Supabase 저장
     const today = new Date().toISOString().slice(0, 10);
     const ts = Date.now();
-    const filename = `RPB_${label || 'result'}_${today}_${ts}.xlsx`;
+    const filename = `RPB_${label || 'result'}_${today}.xlsx`;
     await supabase.storage.from('Results').upload(filename, outBuffer, {
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
